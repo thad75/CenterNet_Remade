@@ -4,7 +4,7 @@ import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 from process import Process_BB
-
+import itertools
 class Process_Heatmap_GT(nn.Module):
 
     """
@@ -13,7 +13,7 @@ class Process_Heatmap_GT(nn.Module):
     def __init__(self,heatmap,R=4):
         super(Process_Heatmap_GT,self).__init__()
         self.heatmap = heatmap
-        print(self.heatmap.shape)
+        # print(self.heatmap.shape)
         self.R = 4
 
     def radius(self,bounding_box):
@@ -53,9 +53,8 @@ class Process_Heatmap_GT(nn.Module):
         m,n = [int((ss - 1)/2) for ss in shape]
         x,y = torch.range(-m,m,1).view(1,-1),torch.range(-n,n,1).view(-1,1)
         gaussian_kernel =torch.transpose(torch.exp(-(torch.pow(x,2)+ torch.pow(y,2)))/2*sigma*sigma,0,1)
-        # gaussian_kernel = gaussian_kernel/torch.max(gaussian_kernel)
-        print(gaussian_kernel.shape)
-        print(gaussian_kernel)
+        gaussian_kernel = gaussian_kernel/torch.max(gaussian_kernel)
+
         return gaussian_kernel
 
     def process_gaussian_coord(self,tuple_of_coord,gaussian):
@@ -88,12 +87,12 @@ class Process_Heatmap_GT(nn.Module):
         sigma = self.radius(bounding_box)
         gaussian = self.get_gaussian([2*min_radius,2*min_radius],sigma)
         W_g, H_g = gaussian.shape
+        print(classe)
         left,right,top,bottom, gaussian = self.process_gaussian_coord((x-W_g//2,x+W_g//2+1,y-H_g//2,y+H_g//2+1), gaussian)
         self.heatmap[classe,left:right,top:bottom ] = torch.max(gaussian,self.heatmap[classe,left:right,top:bottom ])
         return self.heatmap
 
     def draw_bb(self, bounding_box):
-        print('hi',bounding_box)
         x1,y1,x2,y2 = bounding_box
         self.heatmap[0,y1,x1:x2]=1
         self.heatmap[0,y1:y2,x1]=1
@@ -103,9 +102,6 @@ class Process_Heatmap_GT(nn.Module):
 
     def draw_size(self, bounding_box):
         x1,y1,x2,y2 = bounding_box
-        print(x1,y1,x2,y2)
-        print('hi',bounding_box)
-
         self.heatmap[0,(y1+y2)//2,x1:x2]=1
         self.heatmap[0,y1:y2,(x1+x2)//2]=1
         return self.heatmap
@@ -113,13 +109,22 @@ class Process_Heatmap_GT(nn.Module):
     def draw_offset(self,bounding_box):
         x1,y1,x2,y2 = bounding_box
         p = torch.Tensor([(x1+x2)/2/self.R, (y1+y2)/2/self.R])
-        # printé(p)
         p_int = torch.floor(p)
-        print(p, p_int)
         gt_p = p-p_int
-        print(gt_p)
+        self.heatmap[0,int(p[0]+gt_p[0])*self.R,int(p[1])*self.R]=1
+        self.heatmap[1,int(p[0])*self.R,int(p[1]+gt_p[1])*self.R]=1        
         return self.heatmap
 
+    def draw_displacement(self,bounding_box,displacement):
+        x1,y1,x2,y2 = bounding_box
+        x1_d,y1_d,x2_d,y2_d = displacement
+        p = torch.Tensor([(x1+x2)/2, (y1+y2)/2])
+        self.heatmap[0,int(p[0]+x1_d),int(p[1])]=1
+        self.heatmap[0,int(p[0]+x2_d),int(p[1])]=1
+        self.heatmap[1,int(p[0]),int(p[1]+y1_d)]=1  
+        self.heatmap[1,int(p[0]),int(p[1]+y2_d)]=1        
+    
+        return self.heatmap
 
 class Create_Heatmap_GT(nn.Module):
     """
@@ -133,40 +138,39 @@ class Create_Heatmap_GT(nn.Module):
 
     def create_keypoint_map(self,list_of_bounding_boxes):
 
-        for bb, classe in list_of_bounding_boxes:
+        for bb, classe,_ in list_of_bounding_boxes:
             self.heatmap = Process_Heatmap_GT(self.heatmap).draw_gaussian(bb,classe)
 
         return self.heatmap
 
     def create_size_map(self,list_of_bounding_boxes):
         for bb in list_of_bounding_boxes:
-            print(bb)
+            # print(bb)
             self.heatmap = Process_Heatmap_GT(self.heatmap).draw_size(bb)
         return self.heatmap
 
     def create_offset_map(self,list_of_bounding_boxes):
         for bb in list_of_bounding_boxes:
-            print(bb)
+            # print(bb)
             self.heatmap = Process_Heatmap_GT(self.heatmap).draw_offset(bb)
         return self.heatmap
 
     def create_rectangle_map(self,list_of_bounding_boxes):
         for bb in list_of_bounding_boxes:
-            print(bb)
+            # print(bb)
             self.heatmap = Process_Heatmap_GT(self.heatmap).draw_bb(bb)
         return self.heatmap
 
+    def create_displacement_map(self,list_of_bounding_boxes, list_of_bounding_boxes_prev):
+        for i,j in itertools.zip_longest(list_of_bounding_boxes,list_of_bounding_boxes_prev):
+            # print(i,j)
+            if i is None:
+              i = [0,0,0,0]
+            if j is None:
+              j = [0,0,0,0]
+            # print(i,j)
+            self.heatmap = Process_Heatmap_GT(self.heatmap).draw_displacement(i,j)
+        return self.heatmap
 
-bounding_box = [50,50,120,120]
-a = torch.zeros((2,128,128))      
-# f= Process_Heatmap_GT(a)
-# a = f.draw_gaussian(bounding_box,1)
-bounding_boxes = [([0,0,100,80],2),([80,0,110,50],2),([10,30,70,38],2)]#,(,,([10,30,70,38],2)]
-only_bb = [i[0] for i in bounding_boxes]
-print(only_bb)
-# for bb, classe in bounding_boxes:
-#     a = Process_Heatmap_GT(a)
-#     a= a.draw_gaussian(bb,classe)
-# # print(a.unique())
 
-f = Create_Heatmap_GT(a).create_size_map(only_bb)
+      

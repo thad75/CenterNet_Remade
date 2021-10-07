@@ -1,4 +1,7 @@
 import numpy as np
+import torch 
+import torch.nn as nn 
+
 
 class Process_MOT():
     """
@@ -28,10 +31,11 @@ class Process_MOT():
         f = self.read_file()
         list_of_anno = []
         for line in f :
-          frame, id, x1, y1, x2,y2, confidence, classe , visibility = self.process_line(line)
+          frame, ids, x1, y1, x2,y2, confidence, classe , visibility = self.process_line(line)
           if int(frame)== frame_n:
-              list_of_anno.append(([x1,y1,x2,y2],classe)) 
+              list_of_anno.append(([x1,y1,x2,y2],classe,ids)) 
         return list_of_anno
+
 
 
     def return_consecutive_frame_anno(self,frame_n,frame_m):
@@ -45,16 +49,21 @@ class Process_MOT():
         Returns:
             [list_of_displacement]: (displacement, class , id) of objects in frame
         """
-        f = self.read_file()
-        list_of_anno, frame_n_list, frame_m_list = [], [], []
-        for line in f :
-          frame, id, x1, y1, x2,y2, confidence, classe , visibility = self.process_line(line)
-          if int(frame)== frame_n:
-              frame_n_list.append(([x1,y1,x2,y2],classe,id)) 
-          if int(frame)== frame_m:
-              frame_m_list.append(([x1,y1,x2,y2],classe,id)) 
-        displacement = [(list(np.array(frame_m_list[i][0])-np.array(frame_n_list[i][0])),frame_n_list[i][1], frame_n_list[i][2]) for i in range(len(frame_n_list))]
+        frame_n_list = self.return_anno_for_frame(frame_n)
+        frame_m_list = self.return_anno_for_frame(frame_m)
+        displacement = []
+        ids = [i[2] for i in frame_n_list]
+        not_unique = [i[2] for i in frame_n_list for j in frame_m_list if i[2]==j[2] not in frame_m_list]
+        unique = list(set(ids)-set(not_unique))
+        for bb_n, classe_n,id_n in frame_n_list:
+            for  bb_m, classe_m,id_m in frame_m_list:
+                if id_m== id_n and classe_n==1==classe_m:
+                    displacement.append((list(np.array(bb_n)- np.array(bb_m)),id_n))
+        for id_n in unique:
+            displacement.append(([0,0,0,0], id_n))
         return displacement
+
+
 
 class Process_BB(nn.Module):
     """
