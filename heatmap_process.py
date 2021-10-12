@@ -13,7 +13,6 @@ class Process_Heatmap_GT(nn.Module):
     def __init__(self,heatmap,R=4):
         super(Process_Heatmap_GT,self).__init__()
         self.heatmap = heatmap
-        # print(self.heatmap.shape)
         self.R = 4
 
     def radius(self,bounding_box):
@@ -74,8 +73,8 @@ class Process_Heatmap_GT(nn.Module):
         if bottom > self.heatmap.shape[2]:
             bottom = self.heatmap.shape[2]
         if (left,right,top,bottom ) != tuple_of_coord:
-            left_c,right_c,top_c,bottom_c = (tuple(map(lambda i, j: i - j, (left,right,top,bottom ), tuple_of_coord)))
-            gaussian = gaussian[left_c: W+ right_c,top_c: H+ bottom_c]
+            left_c,right_c,top_c,bottom_c = tuple(map(lambda i, j: i - j, (left,right,top,bottom ), tuple_of_coord))
+            gaussian = gaussian[0+left_c: W+ right_c,0+top_c: H+ bottom_c]
         return left,right,top,bottom, gaussian
 
     def draw_gaussian(self,bounding_box,classe,min_radius = 60):
@@ -87,7 +86,6 @@ class Process_Heatmap_GT(nn.Module):
         sigma = self.radius(bounding_box)
         gaussian = self.get_gaussian([2*min_radius,2*min_radius],sigma)
         W_g, H_g = gaussian.shape
-        print(classe)
         left,right,top,bottom, gaussian = self.process_gaussian_coord((x-W_g//2,x+W_g//2+1,y-H_g//2,y+H_g//2+1), gaussian)
         self.heatmap[classe,left:right,top:bottom ] = torch.max(gaussian,self.heatmap[classe,left:right,top:bottom ])
         return self.heatmap
@@ -136,41 +134,55 @@ class Create_Heatmap_GT(nn.Module):
         # self.list_of_bounding_boxes = list_of_bounding_boxes
         self.heatmap = heatmap
 
-    def create_keypoint_map(self,list_of_bounding_boxes):
-
-        for bb, classe,_ in list_of_bounding_boxes:
+    def create_keypoint_map(self,list_of_bounding_boxes, input_shape, output_shape,wanted_class = None):
+        for bb, classe,_ in list_of_bounding_boxes:  
+            bb = self.convert_size( bb , input_shape, output_shape)
             self.heatmap = Process_Heatmap_GT(self.heatmap).draw_gaussian(bb,classe)
-
+        if wanted_class: 
+            return self.heatmap[wanted_class,:,:].unsqueeze(0)
         return self.heatmap
 
-    def create_size_map(self,list_of_bounding_boxes):
+    def create_size_map(self,list_of_bounding_boxes, input_shape, output_shape):
         for bb in list_of_bounding_boxes:
-            # print(bb)
+            bb = self.convert_size( bb , input_shape, output_shape)
+
             self.heatmap = Process_Heatmap_GT(self.heatmap).draw_size(bb)
         return self.heatmap
 
-    def create_offset_map(self,list_of_bounding_boxes):
+    def create_offset_map(self,list_of_bounding_boxes, input_shape, output_shape):
         for bb in list_of_bounding_boxes:
-            # print(bb)
+            bb = self.convert_size( bb , input_shape, output_shape)
             self.heatmap = Process_Heatmap_GT(self.heatmap).draw_offset(bb)
         return self.heatmap
 
-    def create_rectangle_map(self,list_of_bounding_boxes):
+    def create_rectangle_map(self,list_of_bounding_boxes, input_shape, output_shape):
         for bb in list_of_bounding_boxes:
+            bb = self.convert_size( bb , input_shape, output_shape)
             # print(bb)
             self.heatmap = Process_Heatmap_GT(self.heatmap).draw_bb(bb)
         return self.heatmap
 
-    def create_displacement_map(self,list_of_bounding_boxes, list_of_bounding_boxes_prev):
+    def create_displacement_map(self,list_of_bounding_boxes, list_of_bounding_boxes_prev,input_shape, output_shape):
         for i,j in itertools.zip_longest(list_of_bounding_boxes,list_of_bounding_boxes_prev):
             # print(i,j)
             if i is None:
               i = [0,0,0,0]
             if j is None:
               j = [0,0,0,0]
-            # print(i,j)
+            i = self.convert_size( i , input_shape, output_shape)            
+            j = self.convert_size( j , input_shape, output_shape)
             self.heatmap = Process_Heatmap_GT(self.heatmap).draw_displacement(i,j)
         return self.heatmap
 
 
-      
+    def convert_size(self,bb, input_shape,output_shape):
+   
+            W_init, H_init= input_shape
+            W_out, H_out= output_shape
+            W,H  = W_out/W_init, H_out/H_init
+            x1,y1,x2,y2 = bb
+            x1,y1,x2,y2 = x1*W,y1*H,x2*W,y2*H
+            bb = [x1,y1,x2,y2]
+            return [int(i) for i in bb]
+        
+   

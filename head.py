@@ -24,6 +24,7 @@ class Detection_Head(nn.Module):
 
     def forward(self,x):
         x = self.pipeline(x)
+        x = nn.Sigmoid()(x)
         return x
 
 class Size_Head(nn.Module):
@@ -42,6 +43,7 @@ class Size_Head(nn.Module):
 
     def forward(self,x):
         x = self.pipeline(x)
+        x = nn.Sigmoid()(x)
         return x
 
 class Offset_Head(nn.Module):
@@ -60,6 +62,7 @@ class Offset_Head(nn.Module):
 
     def forward(self,x):
         x = self.pipeline(x)
+        x = nn.Sigmoid()(x)
         return x
 
 
@@ -79,4 +82,6 @@ class Displacement_Head(nn.Module):
 
     def forward(self,x):
         x = self.pipeline(x)
+        x = nn.Sigmoid()(x)
+
         return x

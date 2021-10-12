@@ -26,12 +26,15 @@ class Loss_k(nn.Module):
         return torch.pow(1-pred,self.alpha)
 
     def forward(self,pred,gt):
+
+        print(torch.max(pred))
         pos_indices, neg_indices = self.get_one_or_others(gt)
+        print(torch.unique(pos_indices))
+        print(torch.unique(neg_indices))
         pos_loss = self.get_alpha_loss_term(pred)*torch.log(pred)*pos_indices
         neg_loss = self.get_beta_loss_term(gt)*torch.pow(pred,self.alpha)*torch.log(1-pred)*neg_indices
 
         number_of_keypoints = torch.sum(pos_indices)
-        
         pos_loss = torch.sum(pos_loss)
         neg_loss = torch.sum(neg_loss)
 
@@ -85,7 +88,7 @@ class Loss_Displacement(nn.Module):
         Size Loss
     """
     def __init__(self):
-        super(Loss_Size,self).__init__()
+        super(Loss_Displacement,self).__init__()
 
 
     def forward(self,pred, gt):
@@ -109,12 +112,6 @@ class Loss_overall(nn.Module):
         L_k = Loss_k()(pred_k,gt_k)
         L_size= Loss_Size()(pred_size,gt_size)
         L_offset = Loss_Offset()(pred_offset,gt_offset)
-        Loss_Displacement = Loss_Displacement()(pred_displacement,gt_displacement)
-        return L_k + self.lambda_size*L_size + self.lambda_offset*Loss_Offset
+        L_displacement = Loss_Displacement()(pred_displacement,gt_displacement)
+        return L_k+ self.lambda_size*L_size + self.lambda_offset*L_offset + L_displacement
 
-
-pred = torch.rand(1,2,100)
-# print(pred)
-gt = torch.rand(1,2,100)
-
-Loss_k()(pred,gt)

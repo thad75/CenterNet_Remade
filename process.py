@@ -20,14 +20,17 @@ class Process_MOT():
     def process_line(self,line):
         line = line.replace('\n','').split(',')
         line = [int(i) for i in line[:-1]]+ [float(line[-1])]
-        frame, id, x1, y1, x2,y2, confidence, classe , visibility= line
+        frame, ids, x1, y1, x2,y2, confidence, classe , visibility= line
         x1 = x1-1
         y1 = y1 -1
         x2 = x1+ x2-1
         y2 = y1 + y2-1
-        return frame, id, x1, y1, x2,y2, confidence, classe , visibility
+        return frame, ids, x1, y1, x2,y2, confidence, classe , visibility
 
     def return_anno_for_frame(self,frame_n):
+        """
+        Returns the annotation for the frame_n frame
+        """
         f = self.read_file()
         list_of_anno = []
         for line in f :
