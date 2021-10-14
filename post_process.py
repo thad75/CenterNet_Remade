@@ -57,7 +57,12 @@ class Decode_Map(nn.Module):
             classes = top_k_classe.view(BS,-1)
             scores = top_k_scores.view(BS,-1)
             centers =   torch.cat([top_k_xs.unsqueeze(2), top_k_ys.unsqueeze(2)],dim= 2)
+
+        
+        def process_size_map(self, top_k_indices):
+            self.heatmap_size = self.get_feature(self.heatmap_size, top_k_indices)
             
+
 
 
              
