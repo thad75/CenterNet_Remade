@@ -36,7 +36,7 @@ class Decode_Map(nn.Module):
             top_k_indices = self.get_feature(top_k_indices.view(BS,-1,1), top_k_indice).view(BS,k)
             top_k_ys = self.get_feature(top_k_ys.view(BS,-1,1), top_k_indice).view(BS,k)
             top_k_xs = self.get_feature(top_k_xs.view(BS,-1,1), top_k_indice).view(BS,k)
-            return top_k_scores, top_k_indices,top_k_classe, top_k_ys, top_k_xs
+            return top_k_scores, top_k_indices,top_k_classe, top_k_ys, top_k_xs, BS
         
 
         def nms(self,heatmap, kernel = 3):
@@ -53,7 +53,11 @@ class Decode_Map(nn.Module):
 
         def decode(self,heatmap,k=100):
             heatmap = self.nms(heatmap)
-            top_k_scores, top_k_indices,top_k_classe, top_k_ys, top_k_xs = self.top_k(heatmap)
+            top_k_scores, top_k_indices,top_k_classe, top_k_ys, top_k_xs, BS = self.top_k(heatmap)
+            classes = top_k_classe.view(BS,-1)
+            scores = top_k_scores.view(BS,-1)
+            centers =   torch.cat([top_k_xs.unsqueeze(2), top_k_ys.unsqueeze(2)],dim= 2)
             
+
 
              
