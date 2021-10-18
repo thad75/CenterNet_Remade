@@ -51,18 +51,29 @@ class Decode_Map(nn.Module):
             return heatmap*keep
 
 
+
+        
+        def process_size_map(self, centers,top_k_indices,BS,k=100):
+            height_width =  self.get_feature(self.heatmap_size, top_k_indices).view(BS,k,2)
+            height_width[height_width<0]= 0
+            xs, ys = centers
+            bboxes = torch.cat([xs - height_width[..., 0:1] / 2, 
+                                ys - height_width[..., 1:2] / 2,
+                                xs + height_width[..., 0:1] / 2, 
+                                ys + height_width[..., 1:2] / 2], dim=2)
+            return bboxes
+
+
+
         def decode(self,heatmap,k=100):
             heatmap = self.nms(heatmap)
             top_k_scores, top_k_indices,top_k_classe, top_k_ys, top_k_xs, BS = self.top_k(heatmap)
             classes = top_k_classe.view(BS,-1)
             scores = top_k_scores.view(BS,-1)
             centers =   torch.cat([top_k_xs.unsqueeze(2), top_k_ys.unsqueeze(2)],dim= 2)
+            bboxes = self.process_size_map(centers,top_k_indices,BS,k)
+            print(bboxes)
 
-        
-        def process_size_map(self, top_k_indices):
-            self.heatmap_size = self.get_feature(self.heatmap_size, top_k_indices)
+
             
-
-
-
              
