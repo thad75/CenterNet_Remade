@@ -61,9 +61,11 @@ class Process_MOT():
         for bb_n, classe_n,id_n in frame_n_list:
             for  bb_m, classe_m,id_m in frame_m_list:
                 if id_m== id_n and classe_n==1==classe_m:
-                    displacement.append((list(np.array(bb_n)- np.array(bb_m)),id_n))
+                    temp_displacement = list(np.array(bb_n)- np.array(bb_m))
+                    temp_displacement = [(temp_displacement[0]+temp_displacement[2])/2, (temp_displacement[1]+temp_displacement[3])/2]
+                    displacement.append((temp_displacement,id_n))
         for id_n in unique:
-            displacement.append(([0,0,0,0], id_n))
+            displacement.append(([0,0], id_n))
         return displacement
 
 

@@ -100,8 +100,8 @@ class Process_Heatmap_GT(nn.Module):
 
     def draw_size(self, bounding_box):
         x1,y1,x2,y2 = bounding_box
-        self.heatmap[0,(y1+y2)//2,x1:x2]=int(abs(y2-y1)) #1
-        self.heatmap[0,y1:y2,(x1+x2)//2]=int(abs(x2-x1))#1
+        self.heatmap[0,(x1+x2)//2,(y1+y2)//2]=int(abs(x2-x1)) #1
+        self.heatmap[1,(x1+x2)//2,(y1+y2)//2]=int(abs(y2-y1))#1
         return self.heatmap
 
     def draw_offset(self,bounding_box):
@@ -109,19 +109,17 @@ class Process_Heatmap_GT(nn.Module):
         p = torch.Tensor([(x1+x2)/2/self.R, (y1+y2)/2/self.R])
         p_int = torch.floor(p)
         gt_p = p-p_int
-        self.heatmap[0,int(p[0]+gt_p[0])*self.R,int(p[1])*self.R]=gt_p[0] #1
-        self.heatmap[1,int(p[0])*self.R,int(p[1]+gt_p[1])*self.R]=gt_p[1] #1   
+        self.heatmap[0,(x1+x2)//2,(y1+y2)//2]=gt_p[0] #1
+        self.heatmap[1,(x1+x2)//2,(y1+y2)//2]=gt_p[1]#1
+        # self.heatmap[0,int(p[0]+gt_p[0])*self.R,int(p[1])*self.R]= #1
+        # self.heatmap[1,int(p[0])*self.R,int(p[1]+gt_p[1])*self.R]= #1   
         return self.heatmap
 
     def draw_displacement(self,bounding_box,displacement):
         x1,y1,x2,y2 = bounding_box
-        x1_d,y1_d,x2_d,y2_d = displacement
-        p = torch.Tensor([(x1+x2)/2, (y1+y2)/2])
-        self.heatmap[0,int(p[0]+x1_d),int(p[1])]=1
-        self.heatmap[0,int(p[0]+x2_d),int(p[1])]=1
-        self.heatmap[1,int(p[0]),int(p[1]+y1_d)]=1  
-        self.heatmap[1,int(p[0]),int(p[1]+y2_d)]=1        
-    
+        x1_d,y1_d= displacement
+        self.heatmap[0,(x1+x2)//2,(y1+y2)//2]=x1_d #1
+        self.heatmap[1,(x1+x2)//2,(y1+y2)//2]=y1_d#1
         return self.heatmap
 
 class Create_Heatmap_GT(nn.Module):
